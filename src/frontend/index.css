@@ -1,0 +1,118 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --radius: 0.5rem;
+    --background: 0.07 0.03 240;
+    --foreground: 0.95 0.01 240;
+    --card: 0.10 0.04 240;
+    --card-foreground: 0.95 0.01 240;
+    --popover: 0.12 0.05 240;
+    --popover-foreground: 0.95 0.01 240;
+    --primary: 0.55 0.22 264;
+    --primary-foreground: 0.98 0.00 0;
+    --secondary: 0.15 0.05 240;
+    --secondary-foreground: 0.95 0.01 240;
+    --muted: 0.15 0.04 240;
+    --muted-foreground: 0.60 0.04 240;
+    --accent: 0.20 0.06 240;
+    --accent-foreground: 0.95 0.01 240;
+    --destructive: 0.60 0.22 25;
+    --destructive-foreground: 0.98 0.00 0;
+    --border: 0.20 0.06 240;
+    --input: 0.18 0.05 240;
+    --ring: 0.55 0.22 264;
+    --chart-1: 0.55 0.22 264;
+    --chart-2: 0.65 0.18 200;
+    --chart-3: 0.50 0.20 170;
+    --chart-4: 0.70 0.20 80;
+    --chart-5: 0.65 0.20 300;
+    --sidebar: 0.09 0.04 240;
+    --sidebar-foreground: 0.95 0.01 240;
+    --sidebar-primary: 0.55 0.22 264;
+    --sidebar-primary-foreground: 0.98 0.00 0;
+    --sidebar-accent: 0.15 0.05 240;
+    --sidebar-accent-foreground: 0.90 0.02 240;
+    --sidebar-border: 0.20 0.06 240;
+    --sidebar-ring: 0.55 0.22 264;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Poppins', sans-serif;
+    background: #070d1f;
+    color: #e2e8f0;
+  }
+}
+
+@layer utilities {
+  .smm-card {
+    background: linear-gradient(135deg, #0f1629 0%, #1a2340 100%);
+    border: 1px solid rgba(59, 130, 246, 0.2);
+    border-radius: 0.75rem;
+  }
+
+  .smm-card-hover:hover {
+    border-color: rgba(59, 130, 246, 0.5);
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.1);
+    transition: all 0.3s ease;
+  }
+
+  .smm-btn-primary {
+    background: linear-gradient(135deg, #2563eb, #3b82f6);
+    color: white;
+    font-weight: 600;
+    border-radius: 0.5rem;
+    padding: 0.5rem 1.25rem;
+    transition: all 0.2s ease;
+  }
+
+  .smm-btn-primary:hover {
+    background: linear-gradient(135deg, #1d4ed8, #2563eb);
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.4);
+    transform: translateY(-1px);
+  }
+
+  .smm-sidebar {
+    background: linear-gradient(180deg, #090e1f 0%, #0d1530 100%);
+    border-right: 1px solid rgba(59, 130, 246, 0.15);
+  }
+
+  .smm-stat-card {
+    background: linear-gradient(135deg, #0f1629 0%, #1a2340 100%);
+    border: 1px solid rgba(59, 130, 246, 0.2);
+    border-radius: 1rem;
+    padding: 1.5rem;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .smm-stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #2563eb, #60a5fa);
+  }
+
+  .glow-blue {
+    box-shadow: 0 0 30px rgba(59, 130, 246, 0.15);
+  }
+
+  .text-gradient-blue {
+    background: linear-gradient(135deg, #60a5fa, #a78bfa);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+}
