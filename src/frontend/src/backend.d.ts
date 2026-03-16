@@ -73,6 +73,7 @@ export enum UserRole {
 }
 export interface backendInterface {
     addService(name: string, category: string, serviceType: string, pricePerThousand: number, minQuantity: bigint, maxQuantity: bigint, apiServiceId: string): Promise<void>;
+    adminPlaceOrder(serviceId: bigint, link: string, quantity: bigint): Promise<void>;
     approveFundRequest(requestId: bigint): Promise<void>;
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
     createSupportTicket(subject: string, message: string): Promise<void>;

@@ -176,6 +176,7 @@ export default function ServicesPage() {
   const [services, setServices] = useState<Service[]>([]);
   const [tab, setTab] = useState("All");
   const [loading, setLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [orderModal, setOrderModal] = useState<Service | null>(null);
   const [orderLink, setOrderLink] = useState("");
   const [orderQty, setOrderQty] = useState("");
@@ -185,6 +186,11 @@ export default function ServicesPage() {
 
   useEffect(() => {
     if (!actor) return;
+    // Check admin status
+    actor
+      .isCallerAdmin()
+      .then(setIsAdmin)
+      .catch(() => setIsAdmin(false));
     actor
       .getServices()
       .then((s) => {
@@ -209,7 +215,12 @@ export default function ServicesPage() {
     setPlacing(true);
     setError("");
     try {
-      await actor.placeOrder(orderModal.id, orderLink, BigInt(orderQty));
+      if (isAdmin) {
+        // Admin gets all services completely free via dedicated endpoint
+        await actor.adminPlaceOrder(orderModal.id, orderLink, BigInt(orderQty));
+      } else {
+        await actor.placeOrder(orderModal.id, orderLink, BigInt(orderQty));
+      }
       setSuccess(true);
       setTimeout(() => {
         setOrderModal(null);
@@ -218,7 +229,11 @@ export default function ServicesPage() {
         setOrderQty("");
       }, 2000);
     } catch (_e) {
-      setError("Order failed. Check your wallet balance.");
+      if (isAdmin) {
+        setError("Order failed. Please try again.");
+      } else {
+        setError("Order failed. Check your wallet balance.");
+      }
     }
     setPlacing(false);
   };
@@ -231,7 +246,13 @@ export default function ServicesPage() {
       <div>
         <h1 className="text-2xl font-bold text-white">Services</h1>
         <p className="text-slate-400 text-sm mt-1">
-          Choose a service and grow your social media
+          {isAdmin ? (
+            <span className="text-green-400 font-medium">
+              Admin mode: All services are FREE
+            </span>
+          ) : (
+            "Choose a service and grow your social media"
+          )}
         </p>
       </div>
 
@@ -282,10 +303,16 @@ export default function ServicesPage() {
                   </span>
                 </div>
                 <div className="text-right">
-                  <div className="text-green-400 font-bold">
-                    ${svc.pricePerThousand.toFixed(2)}
-                  </div>
-                  <div className="text-xs text-slate-400">per 1000</div>
+                  {isAdmin ? (
+                    <div className="text-green-400 font-bold text-xs">FREE</div>
+                  ) : (
+                    <>
+                      <div className="text-green-400 font-bold">
+                        ${svc.pricePerThousand.toFixed(2)}
+                      </div>
+                      <div className="text-xs text-slate-400">per 1000</div>
+                    </>
+                  )}
                 </div>
               </div>
               <div className="flex justify-between text-xs text-slate-400 mb-4">
@@ -330,9 +357,17 @@ export default function ServicesPage() {
               {orderModal.name}
             </h2>
             <p className="text-slate-400 text-sm mb-5">
-              ${orderModal.pricePerThousand.toFixed(2)} per 1000 · Min{" "}
-              {String(orderModal.minQuantity)} · Max{" "}
-              {String(orderModal.maxQuantity)}
+              {isAdmin ? (
+                <span className="text-green-400 font-semibold">
+                  FREE for Admin
+                </span>
+              ) : (
+                <>
+                  ${orderModal.pricePerThousand.toFixed(2)} per 1000 · Min{" "}
+                  {String(orderModal.minQuantity)} · Max{" "}
+                  {String(orderModal.maxQuantity)}
+                </>
+              )}
             </p>
             <div className="space-y-4">
               <div>
@@ -372,7 +407,7 @@ export default function ServicesPage() {
               <div className="bg-blue-900/20 rounded-lg p-3 flex justify-between">
                 <span className="text-slate-400 text-sm">Total Price</span>
                 <span className="text-green-400 font-bold">
-                  ${calcPrice().toFixed(2)}
+                  {isAdmin ? "FREE" : `$${calcPrice().toFixed(2)}`}
                 </span>
               </div>
               {error && (

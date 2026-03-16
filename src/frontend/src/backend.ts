@@ -173,6 +173,7 @@ export interface backendInterface {
     _caffeineStorageUpdateGatewayPrincipals(): Promise<void>;
     _initializeAccessControlWithSecret(userSecret: string): Promise<void>;
     addService(name: string, category: string, serviceType: string, pricePerThousand: number, minQuantity: bigint, maxQuantity: bigint, apiServiceId: string): Promise<void>;
+    adminPlaceOrder(serviceId: bigint, link: string, quantity: bigint): Promise<void>;
     approveFundRequest(requestId: bigint): Promise<void>;
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
     createSupportTicket(subject: string, message: string): Promise<void>;
@@ -471,6 +472,20 @@ export class Backend implements backendInterface {
             }
         } else {
             const result = await this.actor.isCallerAdmin();
+            return result;
+        }
+    }
+    async adminPlaceOrder(arg0: bigint, arg1: string, arg2: bigint): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.adminPlaceOrder(arg0, arg1, arg2);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.adminPlaceOrder(arg0, arg1, arg2);
             return result;
         }
     }

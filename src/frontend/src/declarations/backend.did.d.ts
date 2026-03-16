@@ -108,6 +108,7 @@ export interface _SERVICE {
   'getUserTickets' : ActorMethod<[Principal], Array<SupportTicket>>,
   'isCallerAdmin' : ActorMethod<[], boolean>,
   'placeOrder' : ActorMethod<[bigint, string, bigint], undefined>,
+  'adminPlaceOrder' : ActorMethod<[bigint, string, bigint], undefined>,
   'rejectFundRequest' : ActorMethod<[bigint], undefined>,
   'replyToTicket' : ActorMethod<[bigint, string], undefined>,
   'requestFunds' : ActorMethod<[number, string], undefined>,

@@ -1,18 +1,26 @@
 import { Shield, TrendingUp, Users, Zap } from "lucide-react";
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useActor } from "../hooks/useActor";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
 
 export default function LoginPage() {
   const { login, identity, isLoggingIn, isInitializing } =
     useInternetIdentity();
+  const { actor } = useActor();
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (identity && !identity.getPrincipal().isAnonymous()) {
-      navigate("/dashboard");
+    if (identity && !identity.getPrincipal().isAnonymous() && actor) {
+      actor.isCallerAdmin().then((isAdmin) => {
+        if (isAdmin) {
+          navigate("/admin");
+        } else {
+          navigate("/dashboard");
+        }
+      });
     }
-  }, [identity, navigate]);
+  }, [identity, actor, navigate]);
 
   const features = [
     { icon: TrendingUp, text: "Instagram, YouTube, Facebook, TikTok" },

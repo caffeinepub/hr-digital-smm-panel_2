@@ -1,13 +1,10 @@
 import Map "mo:core/Map";
-import Array "mo:core/Array";
 import Runtime "mo:core/Runtime";
 import Nat "mo:core/Nat";
-import Iter "mo:core/Iter";
 import Text "mo:core/Text";
 import Time "mo:core/Time";
 import Float "mo:core/Float";
 import Principal "mo:core/Principal";
-import Order "mo:core/Order";
 import MixinAuthorization "authorization/MixinAuthorization";
 import AccessControl "authorization/access-control";
 import _Storage "blob-storage/Storage";
@@ -52,15 +49,6 @@ actor {
     balance : Float;
   };
 
-  module User {
-    public func compare(user1 : User, user2 : User) : Order.Order {
-      switch (Principal.compare(user1.id, user2.id)) {
-        case (#equal) { Float.compare(user1.balance, user2.balance) };
-        case (order) { order };
-      };
-    };
-  };
-
   let users = Map.empty<Principal, User>();
 
   type FundRequest = {
@@ -90,7 +78,7 @@ actor {
     apiServiceId : Text;
   };
 
-  type Order = {
+  type SmmOrder = {
     id : Nat;
     userId : Principal;
     serviceId : Nat;
@@ -126,7 +114,7 @@ actor {
 
   let fundRequests = Map.empty<Nat, FundRequest>();
   let services = Map.empty<Nat, Service>();
-  let orders = Map.empty<Nat, Order>();
+  let orders = Map.empty<Nat, SmmOrder>();
   let tickets = Map.empty<Nat, SupportTicket>();
 
   func getUserInternal(caller : Principal) : User {
@@ -177,17 +165,10 @@ actor {
     if (fundRequest.status != #pending) {
       Runtime.trap("Only pending requests can be approved");
     };
-    let updatedRequest = {
-      fundRequest with
-      status = #approved;
-    };
+    let updatedRequest = { fundRequest with status = #approved };
     fundRequests.add(requestId, updatedRequest);
-
     let user = getUserInternal(fundRequest.userId);
-    let updatedUser = {
-      user with
-      balance = user.balance + fundRequest.amount;
-    };
+    let updatedUser = { user with balance = user.balance + fundRequest.amount };
     users.add(fundRequest.userId, updatedUser);
   };
 
@@ -202,11 +183,31 @@ actor {
     if (fundRequest.status != #pending) {
       Runtime.trap("Only pending requests can be rejected");
     };
-    let updatedRequest = {
-      fundRequest with
-      status = #rejected;
-    };
+    let updatedRequest = { fundRequest with status = #rejected };
     fundRequests.add(requestId, updatedRequest);
+  };
+
+  public shared ({ caller }) func adminAddBalance(amount : Float) : async () {
+    if (not AccessControl.isAdmin(accessControlState, caller)) {
+      Runtime.trap("Unauthorized: Only admins can add balance directly");
+    };
+    let user = getUserInternal(caller);
+    let updatedUser = { user with balance = user.balance + amount };
+    users.add(caller, updatedUser);
+  };
+
+  public shared ({ caller }) func transferBalance(toUser : Principal, amount : Float) : async () {
+    if (not AccessControl.isAdmin(accessControlState, caller)) {
+      Runtime.trap("Unauthorized: Only admins can transfer balance");
+    };
+    if (amount <= 0.0) { Runtime.trap("Amount must be positive") };
+    let adminUser = getUserInternal(caller);
+    if (adminUser.balance < amount) { Runtime.trap("Insufficient admin balance") };
+    let updatedAdmin = { adminUser with balance = adminUser.balance - amount };
+    users.add(caller, updatedAdmin);
+    let recipient = getUserInternal(toUser);
+    let updatedRecipient = { recipient with balance = recipient.balance + amount };
+    users.add(toUser, updatedRecipient);
   };
 
   public shared ({ caller }) func addService(
@@ -223,53 +224,65 @@ actor {
     };
     let id = services.size();
     let service : Service = {
-      id;
-      name;
-      category;
-      serviceType;
-      pricePerThousand;
-      minQuantity;
-      maxQuantity;
-      isActive = true;
-      apiServiceId;
+      id; name; category; serviceType; pricePerThousand;
+      minQuantity; maxQuantity; isActive = true; apiServiceId;
     };
     services.add(id, service);
   };
 
-  public shared ({ caller }) func placeOrder(serviceId : Nat, link : Text, quantity : Nat) : async () {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can place orders");
+  // Admin-only: place order completely free, no balance check, no service lookup required
+  public shared ({ caller }) func adminPlaceOrder(serviceId : Nat, link : Text, quantity : Nat) : async () {
+    if (not AccessControl.isAdmin(accessControlState, caller)) {
+      Runtime.trap("Unauthorized: Only admins can use adminPlaceOrder");
     };
-    let service = switch (services.get(serviceId)) {
-      case (null) { Runtime.trap("Service not found") };
-      case (?service) { service };
-    };
-    if (not service.isActive) { Runtime.trap("Service is not active") };
-    if (quantity < service.minQuantity or quantity > service.maxQuantity) {
-      Runtime.trap("Quantity must be between " # service.minQuantity.toText() # " and " # service.maxQuantity.toText());
-    };
-    let user = getUserInternal(caller);
-    let totalPrice = (quantity.toFloat() / 1000.0) * service.pricePerThousand;
-    if (user.balance < totalPrice) {
-      Runtime.trap("Insufficient balance");
-    };
-
-    let updatedUser = {
-      user with
-      balance = user.balance - totalPrice;
-    };
-    users.add(caller, updatedUser);
-
     let id = orders.size();
-    let order : Order = {
+    let order : SmmOrder = {
       id;
       userId = caller;
       serviceId;
       link;
       quantity;
-      totalPrice;
+      totalPrice = 0.0;
       status = #pending;
       apiOrderId = null;
+      timestamp = Time.now();
+    };
+    orders.add(id, order);
+  };
+
+  // Regular user order with balance deduction
+  public shared ({ caller }) func placeOrder(serviceId : Nat, link : Text, quantity : Nat) : async () {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can place orders");
+    };
+    // Admin should use adminPlaceOrder, but handle gracefully if they call this too
+    if (AccessControl.isAdmin(accessControlState, caller)) {
+      let id = orders.size();
+      let order : SmmOrder = {
+        id; userId = caller; serviceId; link; quantity;
+        totalPrice = 0.0; status = #pending; apiOrderId = null;
+        timestamp = Time.now();
+      };
+      orders.add(id, order);
+      return;
+    };
+    let service = switch (services.get(serviceId)) {
+      case (null) { Runtime.trap("Service not found") };
+      case (?s) { s };
+    };
+    if (not service.isActive) { Runtime.trap("Service is not active") };
+    if (quantity < service.minQuantity or quantity > service.maxQuantity) {
+      Runtime.trap("Quantity out of range");
+    };
+    let totalPrice = (quantity.toFloat() / 1000.0) * service.pricePerThousand;
+    let user = getUserInternal(caller);
+    if (user.balance < totalPrice) { Runtime.trap("Insufficient balance") };
+    let updatedUser = { user with balance = user.balance - totalPrice };
+    users.add(caller, updatedUser);
+    let id = orders.size();
+    let order : SmmOrder = {
+      id; userId = caller; serviceId; link; quantity;
+      totalPrice; status = #pending; apiOrderId = null;
       timestamp = Time.now();
     };
     orders.add(id, order);
@@ -281,13 +294,8 @@ actor {
     };
     let id = tickets.size();
     let ticket : SupportTicket = {
-      id;
-      userId = caller;
-      subject;
-      message;
-      status = #open;
-      adminReply = null;
-      timestamp = Time.now();
+      id; userId = caller; subject; message;
+      status = #open; adminReply = null; timestamp = Time.now();
     };
     tickets.add(id, ticket);
   };
@@ -298,13 +306,9 @@ actor {
     };
     let ticket = switch (tickets.get(ticketId)) {
       case (null) { Runtime.trap("Ticket not found") };
-      case (?ticket) { ticket };
+      case (?t) { t };
     };
-    let updatedTicket = {
-      ticket with
-      adminReply = ?reply;
-      status = #closed;
-    };
+    let updatedTicket = { ticket with adminReply = ?reply; status = #closed };
     tickets.add(ticketId, updatedTicket);
   };
 
@@ -312,7 +316,7 @@ actor {
     services.toArray().map(func((_, service)) { service });
   };
 
-  public query ({ caller }) func getUserOrders(userId : Principal) : async [Order] {
+  public query ({ caller }) func getUserOrders(userId : Principal) : async [SmmOrder] {
     if (caller != userId and not AccessControl.isAdmin(accessControlState, caller)) {
       Runtime.trap("Unauthorized: Can only view your own orders");
     };

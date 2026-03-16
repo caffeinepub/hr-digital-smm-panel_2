@@ -1,4 +1,4 @@
-import { CheckCircle, QrCode, Upload, Wallet } from "lucide-react";
+import { CheckCircle, Upload, Wallet } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useActor } from "../hooks/useActor";
 
@@ -71,7 +71,7 @@ export default function WalletPage() {
           <span className="text-slate-400 text-sm">Available Balance</span>
         </div>
         <div className="text-4xl font-bold text-white">
-          ${balance.toFixed(2)}
+          ₹{balance.toFixed(2)}
         </div>
       </div>
 
@@ -85,7 +85,7 @@ export default function WalletPage() {
               htmlFor="wallet-amount"
               className="block text-sm text-slate-300 mb-1"
             >
-              Amount ($)
+              Amount (₹)
             </label>
             <input
               id="wallet-amount"
@@ -99,13 +99,25 @@ export default function WalletPage() {
           </div>
 
           <div className="border border-blue-800/40 rounded-xl p-6 bg-blue-950/20 flex flex-col items-center gap-3">
-            <div className="w-32 h-32 bg-white rounded-lg flex items-center justify-center">
-              <QrCode size={80} className="text-blue-900" />
+            <div className="bg-white rounded-xl p-2 shadow-lg shadow-blue-900/40">
+              <img
+                src="/assets/uploads/AccountQRCodeIndian-Bank-4536_LIGHT_THEME-1.png"
+                alt="PhonePe UPI QR Code - Ms Rukhsana"
+                width={200}
+                height={200}
+                className="rounded-lg object-contain"
+                style={{ width: 200, height: 200 }}
+              />
             </div>
             <p className="text-slate-400 text-sm text-center">
               Scan UPI QR code and pay
               <br />
-              <span className="text-blue-400 font-medium">hrdigital@upi</span>
+              <span className="text-blue-400 font-semibold text-base tracking-wide">
+                9730368351-3@axl
+              </span>
+            </p>
+            <p className="text-slate-500 text-xs text-center">
+              Ms Rukhsana · PhonePe
             </p>
           </div>
 
